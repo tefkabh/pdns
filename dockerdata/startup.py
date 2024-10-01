@@ -10,18 +10,22 @@ apienvvar = None
 apiconftemplate = None
 templateroot = '/etc/powerdns/templates.d'
 templatedestination = ''
+templatetargetfileextension = '.conf'
 args = []
 
 if product == 'pdns_recursor':
     args = ['--disable-syslog']
     apienvvar = 'PDNS_RECURSOR_API_KEY'
-    apiconftemplate = """webserver
-api-key={{ apikey }}
-webserver-address=0.0.0.0
-webserver-allow-from=0.0.0.0/0
-webserver-password={{ apikey }}
+    apiconftemplate = """
+    webservice:
+        webserver: true
+        address: 0.0.0.0
+        allow_from: [0.0.0.0/0]
+        password: {{ apikey }}
+        api_key: {{ apikey }}
     """
     templatedestination = '/etc/powerdns/recursor.d'
+    templatetargetfileextension = '.yml'
 elif product == 'pdns_server':
     args = ['--disable-syslog']
     apienvvar = 'PDNS_AUTH_API_KEY'
@@ -50,7 +54,7 @@ debug = os.getenv("DEBUG_CONFIG", 'no').lower() == 'yes'
 apikey = os.getenv(apienvvar)
 if apikey is not None:
     webserver_conf = jinja2.Template(apiconftemplate).render(apikey=apikey)
-    conffile = os.path.join(templatedestination, '_api.conf')
+    conffile = os.path.join(templatedestination, '_api' + templatetargetfileextension)
     with open(conffile, 'w') as f:
         f.write(webserver_conf)
     if debug:
@@ -63,7 +67,7 @@ if templates is not None:
         with open(os.path.join(templateroot, templateFile + '.j2')) as f:
             template = jinja2.Template(f.read())
         rendered = template.render(os.environ)
-        target = os.path.join(templatedestination, templateFile + '.conf')
+        target = os.path.join(templatedestination, templateFile + templatetargetfileextension)
         with open(target, 'w') as f:
             f.write(rendered)
         if debug:
